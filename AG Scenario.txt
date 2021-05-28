@@ -1,0 +1,33 @@
+Scenario 1: Node1,Node2 and Node3 are in Windows Server Failover cluster.
+Scenario 2: SQL Server Service(SQLCLUSTER) in active passive mode in Node1 and Node2.
+Scenario 3: SQL Server Service(MSSQLSERVER) is installed on Node3 as a standalone server.
+
+As the Primary replica is SQLCLUSTER where We can perform Read/Write operation 
+and secondary replica is MSSQLSERVER where We can read the secondary database
+and Automatic failover of Avaialbility Group role is not possible in this scenario as Primary replica is in SQL Server failover 
+cluster Instance.
+
+because primary replica will be avilable either node1 or node2 and it will not be go down and will remain 
+primary even if we manual failover from failover manager or one of Node(Node1 or Node2) goes down.
+
+We can do Manual failover of AG role.
+
+If primary and secondary replica's availability mode is set as synchronous mode there would be a manual 
+failover with no data loss when we do failover.
+
+If primary or secondary replica's availability mode is set as asynchronous mode there would be a forced 
+manual failover with possible data loss when we do failover and need to resume the data movement as well
+after failover. 
+
+Connect SQL Server With Listener
+
+Server Name: listenername,portnumber
+
+If the port is default 1433 then no need to provide.
+
+   
+
+
+
+ 
+  

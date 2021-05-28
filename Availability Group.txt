@@ -1,0 +1,167 @@
+Always On Availabilty Groups:
+Always on availability group is an high availability or disaster recovery solution that provides the maximum availability of user databases.
+
+Availability group supports replicated enviornment of discrete set of user databases know as availabilty databases.
+You can create availabilty group for HA or read scale.
+
+An HA availablity group is a group of databases that fails over together.
+An read scale availability group is a set of databases that are copied to other SQL server instances for read only workload.
+
+An Availabilty group supprts one group of primary databases and one to eight set of secondary databases.
+Secondary databases are not backups. Continue to backup of your databases and transaction logs.
+
+Note: We can create any type of backup of primary databases, Alternatively log backup and copy only full backup of secondary databases.
+
+Each set of availability databases is hosted by an availability replica. Two types of availability replica :
+1: Single Primary Replica: Which hosts primary databases.
+2: One to eight secondary Replica: Each of Which hosts secondary databases.
+
+An Availability group fail over at the level of availability replica not at the database level means failover will not occur if database get 
+suspected or loss of data file of corruption of log file.
+
+The primary replica makes primary databases availble for read write operation from client and primary replica sends transaction logs to 
+each secondary databases called data syncronization , occurs at database level. Each secondary replica caches the transaction logs and then apply 
+to its corresponding secondary databases.
+
+Data synchronization occurs between primary and secondary databases independent of other databases.Therefore a secondary database can be failed
+or suspended without effecting other secondary databases and same as with primary databases. 
+
+Availability Databases:
+
+Availability databases are those database which participate in availablity group and To add databases in availability in AG must be online, read-write.
+Whwn we add database ,it joins the AG as primary database.
+No secondary database will exist untill backup of primary database is restored on secondary replica with NO-RECOVERY.The secondary database will
+be in retoring mode untill it joined to the AG.
+
+Joining palces the database into the ONLINE state and initiates the data syncronization with primary database.
+
+Availability database sometimes called database replica.
+
+Some usefull DMVs:
+
+sys.dm_hadr_availability_group_states,
+sys.dm_hadr_database_replica_states
+sys.dm_hadr_database_replica_cluster_states  
+
+Avaialbilty Replica::
+
+Avaialbility replicas are components of availabilty group. Each AR hosts a copy of AD(Avaialabilty database) in AG.
+Each AR assigned with initial role either primary or secondary.
+
+Availability Mode:
+Avaiability mode is an property of AR which determines the wheather primary replica has to wait for secondary replica to commit the transaction
+or not.
+If primary replica is set as aysnchronous mode then it does not wait for secondary replica to hardens the logs
+and if secondary replica is set as asynchronous then primary does not wait for secondary to hardens the logs and if both
+primary and secondary set as synchronous then primary replica will wait for secondary to write the log in diska and send the confirmation 
+to primary and then primary replica sends the confirmation to client. 
+
+Two types of AM:: 
+
+1) : asynchronous -commit mode: In this mode, primary replica does not wait for the acknowldgement of the secondary replica to commit the 
+transaction logs in disk and it commits the transaction without waiting.
+It minimizes the transaction latency on secondary database.
+but alow then to run lag behind the primary database and possible dataloss.
+The secondary database remains SYNCHRONIZED as long as data synchronization continues. 
+This guarantees that every transaction that is committed on a given primary database has also been committed on the corresponding secondary database
+
+2:) asynchronous -commit mode: in this mode, primary replica waits for acknowledgement of secondary replica 
+till the secondary replica writes the transaction log on disk.
+It increases the trnsaction latency with data protection.
+Under asynchronous-commit mode, the secondary replica never becomes synchronized with the primary replica.
+
+Typically the gap between an asynchronous-commit secondary database and the corresponding primary database is small. 
+But the gap can become substantial if the server hosting the secondary replica is over loaded or the network is slow.
+
+
+ 
+
+Types of Failover::
+
+AR roles roles are interchanageable , thats called failover.
+During a failover, primary secondary replica becomes primary replica and database becomes online and ready for client connect.once the
+primary replica available then it becomes the secondary replica and data synchronization starts.
+
+
+Three forms of failover:
+1: Automatic 
+2: Manual
+3: Forced(With possible data loss)
+
+these forms depends upon the availability mode 
+
+Synchronous-commit mode supports two forms of failover(planned manual and automatic failover).if the secondary replica is currently synchronized 
+with primary database then these forms of failover depends the property of the failover mode property. if the setting is be set as "manual"
+on either primary or secondary then manual failover supports on secondary replica.
+
+if property is to be set as "automatic" on both primary and secondary then "automatic" failover supports on secondary replica.
+
+Planned Manual failover(Without data loss): When database administrator issues a command to change the role of primary and secondary replica. For manual failover 
+it requires that both primary and secondary replica runs under synchronous-commit modeand secondary replica must already be synchronized.
+
+
+Automatic Failover(without data loss):When failover occurs a automatic then AR roles becomes interchhangable automatically. For Automatic failover
+it requires that both primary and secondary replica runs under the synchronous-commit mode with failover mode set to "automatic" with sychronized 
+secondary replica., have WSFC quorum.
+
+Important::
+
+SQL Server Failover Cluster Instances (FCIs) do not support automatic failover by availability groups, 
+so any availability replica that is hosted by an FCI can only be configured for manual failover.
+
+Asynchronous-commit mode supports only forced manual failover (with possible data loss). forced failover is an disaster recovery option.
+It is the only form of failover that can be performed when secondary database is not synchornized with primary database.  
+
+Session Time Out period: Session time out perios is an AR property. The primary and secondary replicas ping each other to signal 
+that they are stil active. On receveing a ping during a time out period that indicates the connection is still open
+and server instances are communicating.
+
+If ping is not received within time out period then connection is closed and and replica times out and time out replica enters in 
+DISCONNECTED State.
+
+If primary's session-timeout period is exceeded by a secondary replica, 
+the primary replica temporarily shifts into asynchronous-commit mode for that secondary replica. 
+When the secondary replica reconnects with the primary replica, they resume synchronous-commit mode.
+
+the default session time out perid is 10 seconds. the values is user configurable.
+
+Note:: 
+
+RESTORE statements are not allowed on either the primary or secondary databases of an availability group.
+
+Backup Types Supported on Secondary Replicas:
+upports only copy-only full backups of databases, files, or filegroups.
+Differential backups aren't supported on secondary replicas.
+BACKUP LOG supports only regular log backups (the COPY_ONLY option is not supported for log backups on secondary replicas).
+To back up a secondary database, a secondary replica must be able to communicate with the primary replica and must be SYNCHRONIZED or SYNCHRONIZING.
+
+
+Factors that disrupts Data synchronization:
+
+https://docs.microsoft.com/en-us/sql/database-engine/availability-groups/windows/availability-modes-always-on-availability-groups?view=sql-server-ver15
+
+
+
+Synchronous operation is maintained in the following manner:
+
+1:) On receiving a transaction from a client, the primary replica writes the log for the transaction to the transaction log and concurrently sends the log record to the secondary replicas.
+
+2:) Once a log record is written to the transaction log of the primary database, 
+the transaction can be undone only if there is a failover at this point to a secondary that did not receive the log. 
+The primary replica waits for confirmation from the synchronous-commit secondary replica.
+
+3:) The secondary replica hardens the log and returns an acknowledgement to the primary replica.
+
+4:) On receiving the confirmation from the secondary replica, 
+the primary replica finishes the commit processing and sends a confirmation message to the client
+
+Data latency on secondary replica::
+
+Implementing read-only access to secondary replicas is useful if your read-only workloads can tolerate some data latency. 
+In situations where data latency is unacceptable, consider running read-only workloads against the primary replica.
+
+The primary replica sends log records of changes on primary database to the secondary replicas. 
+On each secondary database, a dedicated redo thread applies the log records. On a read-access secondary database, 
+a given data change does not appear in query results until the log record that contains the change has been applied to the secondary database and the transaction has been committed on primary database.
+
+To monitor suspended data movement, you can use the Always On Dashboard or the sys.dm_hadr_database_replica_states dynamic management view.
